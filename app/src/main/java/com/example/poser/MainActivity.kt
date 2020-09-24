@@ -3,19 +3,14 @@ package com.example.poser
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.Manifest
-import android.annotation.SuppressLint
-import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.*
 import android.net.Uri
 import android.util.Log
 import android.util.Size
-import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
-import android.widget.TextView
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -36,7 +31,7 @@ import java.util.*
 import java.util.concurrent.ExecutorService
 import kotlin.random.Random.Default.nextInt
 
-typealias TypeListener = (currentscore: Int) -> Unit
+typealias TypeListener = (currentscore: Int, scorebool : Boolean) -> Unit
 
 class MainActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
@@ -108,7 +103,9 @@ class MainActivity : AppCompatActivity() {
                                 //calculate total score
                                 val totalscore = decideValues(smileProb, rightEyeOpenProb, leftEyeOpenProb, THRESHOLD)
                                 match = totalscore
-                                listener(match)
+                                val benchmarkmet = totalscore > 2
+
+                                listener(match, benchmarkmet)
                             }
                         }.addOnFailureListener {e->
                             Log.d(TAG, "process fail")
@@ -174,10 +171,27 @@ class MainActivity : AppCompatActivity() {
         shufflebutton.setOnClickListener(clickListener)
     }
 
+    //update the score display
     private fun updateScore(score: Int) {
         runOnUiThread{
             score_display.text = "Your current score is: $score"
         }
+    }
+
+    //if above the benchmark, then increment the progress bar by 1
+    private fun updateProgress(score: Boolean) {
+        val progressbar = findViewById<ProgressBar>(R.id.score_progressbar)
+        if(score) progressbar.incrementProgressBy(1)
+    }
+
+    //toast for when a score is earned
+    private fun winNotif() {
+        Toast.makeText(baseContext, "One point earned", Toast.LENGTH_SHORT).show()
+    }
+
+    //toast for when a score is lost
+    private fun loseNotif() {
+        Toast.makeText(baseContext, "One point lost!", Toast.LENGTH_SHORT).show()
     }
 
     //shuffle random int
@@ -203,7 +217,7 @@ class MainActivity : AppCompatActivity() {
         val b = evaluateNum(lefteye) + " Open Left Eye"
         val c = evaluateNum(righteye) + " Open Right Eye"
 
-        return {a+", "+b+", "+c}
+        return a+", "+b+", "+c
     }
 
     //helper function for translating from array to string
@@ -241,7 +255,7 @@ class MainActivity : AppCompatActivity() {
 
             analysisUseCase.setAnalyzer(
                 ContextCompat.getMainExecutor(this),
-                FaceAnalyzer {reslt-> updateScore(reslt)}
+                FaceAnalyzer {reslt, boolscore -> updateScore(reslt); updateProgress(boolscore)}
             )
 
             //use front camera as default, as you're going to be analyzing faces

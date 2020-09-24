@@ -67,4 +67,15 @@
         app:layout_constraintStart_toStartOf="parent"
         tools:layout_editor_absoluteY="197dp" />
 
+    <ProgressBar
+        android:id="@+id/score_progressbar"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/viewFinder"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.941" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
