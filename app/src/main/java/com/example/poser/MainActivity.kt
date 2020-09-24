@@ -36,7 +36,7 @@ import java.util.*
 import java.util.concurrent.ExecutorService
 import kotlin.random.Random.Default.nextInt
 
-typealias TypeListener = (faceclassification: Int) -> Unit
+typealias TypeListener = (currentscore: Int) -> Unit
 
 class MainActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
@@ -44,8 +44,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
-
-
 
     //generate random numbers that represent the facial expression that the user is supposed to make
     //0 = smiling
@@ -62,10 +60,7 @@ class MainActivity : AppCompatActivity() {
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
             .enableTracking()
             .build()
-        // Real-time contour detection
-        val realTimeOpts = FaceDetectorOptions.Builder()
-            .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
-            .build()
+
         private fun ImageProxy.toBitmap() : Bitmap?{
             val nv21 = BitmapUtils.yuv420888ToNv21(this)
             val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
@@ -98,6 +93,7 @@ class MainActivity : AppCompatActivity() {
                 try{
                     it.toBitmap()?.let{bm->
                         detector.process(InputImage.fromBitmap(bm, 0)).addOnSuccessListener {faces->
+                            // add code for if there are multiple faces and you have to choose the largest one to analyze
 
                             for (face in faces) {
                                 //get probabilities of each classifier
@@ -105,14 +101,13 @@ class MainActivity : AppCompatActivity() {
                                 val rightEyeOpenProb = face.rightEyeOpenProbability!!
                                 val leftEyeOpenProb = face.leftEyeOpenProbability!!
 
-                                Log.d(TAG, "smilrProb $smileProb")
+                                Log.d(TAG, "smileProb $smileProb")
                                 Log.d(TAG, "rightEyeOpenProb $rightEyeOpenProb")
                                 Log.d(TAG, "leftEyeOpenProb $leftEyeOpenProb")
 
                                 //calculate total score
                                 val totalscore = decideValues(smileProb, rightEyeOpenProb, leftEyeOpenProb, THRESHOLD)
                                 match = totalscore
-
                                 listener(match)
                             }
                         }.addOnFailureListener {e->
@@ -141,12 +136,6 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG,"$totalscore")
 
             return totalscore
-        }
-    }
-
-    private fun showScores(score: Int) {
-        runOnUiThread {
-            score_display.text = "Your current score is: "+"$score"
         }
     }
 
@@ -185,6 +174,12 @@ class MainActivity : AppCompatActivity() {
         shufflebutton.setOnClickListener(clickListener)
     }
 
+    private fun updateScore(score: Int) {
+        runOnUiThread{
+            score_display.text = "Your current score is: $score"
+        }
+    }
+
     //shuffle random int
     private fun shuffle(){
         randomValues = intArrayOf(nextInt(0, 2), nextInt(0,2), nextInt(0,2))
@@ -208,7 +203,7 @@ class MainActivity : AppCompatActivity() {
         val b = evaluateNum(lefteye) + " Open Left Eye"
         val c = evaluateNum(righteye) + " Open Right Eye"
 
-        return a+" "+b+" "+c
+        return {a+", "+b+", "+c}
     }
 
     //helper function for translating from array to string
@@ -246,9 +241,7 @@ class MainActivity : AppCompatActivity() {
 
             analysisUseCase.setAnalyzer(
                 ContextCompat.getMainExecutor(this),
-                FaceAnalyzer {reslt->
-                    Log.d(TAG, reslt.toString())
-                }
+                FaceAnalyzer {reslt-> updateScore(reslt)}
             )
 
             //use front camera as default, as you're going to be analyzing faces
